@@ -1,6 +1,6 @@
 <script setup>
+import { computed } from 'vue';
 import { useAuth } from "@/firebase.js";
-import { computed } from "vue";
 
 const { user } = useAuth();
 
@@ -12,7 +12,8 @@ const props = defineProps({
 })
 
 const messageHour = computed(() => {
-  return new Date(props.message.createdAt.seconds * 1000).toLocaleTimeString('tr-TR', {
+  const date = new Date(props.message.createdAt.seconds * 1000);
+  return date.toLocaleTimeString('tr-TR', {
     timeZone: 'Europe/Istanbul',
     hour: '2-digit',
     minute: '2-digit',
@@ -20,15 +21,14 @@ const messageHour = computed(() => {
 })
 
 function convertTimestamp(timestamp) {
-  let date = timestamp.toDate();
-  let mm = date.getMonth('tr-TR') + 1;
-  let dd = date.getDate();
-  let yyyy = date.getFullYear();
-  let hh = date.getHours();
-  let min = date.getMinutes();
-
-  date = dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + min;
-  return date;
+  const date = timestamp.toDate();
+  return date.toLocaleString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 </script>
 
@@ -45,7 +45,7 @@ function convertTimestamp(timestamp) {
         <span class="font-semibold">{{ message.displayName ?? 'Anonymous' }}</span>
         <div
           class="bg-gradient-to-br from-cyan-600 to-blue-600 p-2 text-justify text-white rounded-lg rounded-tl-none shadow-lg">
-          <span>{{ message.text }}</span>
+          {{ message.text }}
         </div>
         <span class="text-gray-400 italic text-xs">
           {{ convertTimestamp(message.createdAt) }}
@@ -65,7 +65,7 @@ function convertTimestamp(timestamp) {
       <div class="flex-1 items-center justify-end gap-2 text-right">
         <div
           class="bg-gradient-to-br from-green-600 to-emerald-600 p-2 text-justify text-white rounded-lg rounded-tr-none shadow-lg">
-          <span>{{ message.text }}</span>
+          {{ message.text }}
         </div>
         <span class="text-gray-400 italic text-xs">
           {{ convertTimestamp(message.createdAt) }}
@@ -75,5 +75,10 @@ function convertTimestamp(timestamp) {
   </div>
 </template>
 
-
-<style scoped></style>
+<style scoped>
+/* Убираем стили для упоминаний */
+a {
+  text-decoration: none;
+  cursor: default;
+}
+</style>
