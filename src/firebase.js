@@ -82,23 +82,19 @@ function isEnglish(text) {
 
 export function useChat() {
   const messages = ref([]);
-  const filter = new Filter();
+  const filter = new Filter(); // Фильтр для нецензурных слов
   const { isLogin, user } = useAuth();
 
   // Отправка сообщения
   const sendMessage = async (text) => {
     if (!isLogin.value || !text || text.trim().length === 0) return;
 
-    const cleanedText = isEnglish(text) ? filter.clean(text.trim()) : text.trim();
-    const { uid, photoURL, displayName } = user.value;
+    // Отключение фильтрации на время
+    const cleanedText = text.trim();  // Убираем фильтрацию
 
-    // Извлекаем упоминания
-    const mentions = [];
-    const mentionRegex = /@([a-zA-Z0-9_]+)/g;
-    let match;
-    while ((match = mentionRegex.exec(cleanedText)) !== null) {
-      mentions.push(match[1]);
-    }
+    console.log("Текст перед отправкой:", cleanedText); // Логируем текст
+
+    const { uid, photoURL, displayName } = user.value;
 
     // Сохраняем сообщение в Firestore
     await addDoc(collection(db, "messages"), {
@@ -106,8 +102,7 @@ export function useChat() {
       createdAt: new Date(),
       uid,
       photoURL,
-      displayName,
-      mentions,
+      displayName
     });
   };
 
