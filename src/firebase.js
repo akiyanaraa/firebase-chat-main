@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { updateProfile } from "firebase/auth";
+import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import {
   getAuth,
   onAuthStateChanged,
@@ -18,7 +19,6 @@ import {
   onSnapshot
 } from "firebase/firestore";
 
-import Filter from "bad-words";
 import { computed, onUnmounted, ref } from "vue";
 
 // Firebase config
@@ -55,7 +55,6 @@ export function useAuth() {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Сохраняем nickname в профиле
     await updateProfile(user, {
       displayName: nickname
     });
@@ -76,34 +75,60 @@ export function useAuth() {
 }
 
 // 💬 CHAT COMPOSITION
-function isEnglish(text) {
-  return /^[\x00-\x7F]*$/.test(text);
-}
-
 export function useChat() {
   const messages = ref([]);
-  const filter = new Filter(); // Фильтр для нецензурных слов
   const { isLogin, user } = useAuth();
 
-  // Отправка сообщения
   const sendMessage = async (text) => {
     if (!isLogin.value || !text || text.trim().length === 0) return;
 
-    // Отключение фильтрации на время
-    const cleanedText = text.trim();  // Убираем фильтрацию
+    const trimmedText = text.trim();
 
-    console.log("Текст перед отправкой:", cleanedText); // Логируем текст
+    if (trimmedText.length === 0) {
+      console.log("Message is empty after trimming. Not sent.");
+      return;
+    }
 
     const { uid, photoURL, displayName } = user.value;
 
-    // Сохраняем сообщение в Firestore
     await addDoc(collection(db, "messages"), {
-      text: cleanedText,
+      text: trimmedText,
       createdAt: new Date(),
       uid,
       photoURL,
-      displayName
+      displayName,
+      status: 'sent',
+      edited: false
     });
+  };
+
+  const editMessage = async (id, newText) => {
+    if (!id || !newText.trim()) return;
+
+    const trimmedText = newText.trim();
+
+    if (trimmedText.length === 0) {
+      console.log("Edited message is empty after trimming. Not updated.");
+      return;
+    }
+
+    const messageRef = doc(db, "messages", id);
+    await updateDoc(messageRef, {
+      text: trimmedText,
+      edited: true
+    });
+  };
+
+  const deleteMessage = async (id) => {
+    if (!id) {
+      console.log("No ID provided");
+      return;
+    }
+
+    console.log("Deleting message with ID:", id);
+    const messageRef = doc(db, "messages", id);
+    await deleteDoc(messageRef);
+    console.log("Message deleted");
   };
 
   const q = query(
@@ -112,7 +137,6 @@ export function useChat() {
     limit(100)
   );
 
-  // Прослушивание сообщений в чате
   onSnapshot(q, (querySnapshot) => {
     const loadedMessages = querySnapshot.docs.map((doc) => ({
       ...doc.data(),
@@ -122,5 +146,5 @@ export function useChat() {
     messages.value = loadedMessages;
   });
 
-  return { messages, sendMessage };
+  return { messages, sendMessage, editMessage, deleteMessage };
 }
